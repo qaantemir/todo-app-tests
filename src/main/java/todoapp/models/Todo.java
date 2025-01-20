@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Todo {
 
-    private Integer id;
+    private String id;
     private String text;
     private Boolean completed;
 

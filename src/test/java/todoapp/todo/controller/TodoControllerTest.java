@@ -4,13 +4,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.restassured.RestAssured;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import todoapp.generators.TestDataGenerator;
 import todoapp.models.Todo;
 import todoapp.requests.TodoService;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -19,51 +23,57 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 public class TodoControllerTest extends BaseApiTest {
 
     private final TodoService todoService = new TodoService();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    Todo body = TestDataGenerator.generateRandomTodo();
 
     @BeforeEach
     void setupTestData() {
-        todoService.deleteAllTodos();
+        // some code
+    }
+
+    @AfterEach
+    void cleanTestData() {
+        List<String> todoIds = todoService.read().stream().map(todo -> todo.getId()).toList();
+        if (!todoIds.isEmpty()) {
+            todoService.getTodoIds().forEach(id -> todoService.delete(id));
+        }
     }
 
     @Test
     void getTodos() {
-        var result = todoService.read();
+        todoService.create(body);
+        todoService.read();
     }
 
     @Test
     void postTodo() {
-        Todo todo = Todo.builder()
-                .id(111)
-                .text("Eat milk")
-                .completed(false)
-                .build();
+        todoService.create(body);
 
-        todoService.create(todo);
         Todo actualTodo = todoService.read().getFirst();
 
-        assertThat(actualTodo).isEqualTo(todo);
+        assertThat(actualTodo).isEqualTo(body);
 
     }
 
     @Test
     void updateTodo() {
-        var body = Todo.builder()
-                .id(111)
-                .text("Eat milk")
-                .completed(false)
-                .build();
-
-
-        var updatedBody = Todo.builder()
-                .id(111)
-                .text("Eat milk")
-                .completed(true)
-                .build();
+        var id = body.getId();
+        var updatedBody = TestDataGenerator.generateRandomTodo(id);
 
         todoService.create(body);
         todoService.update(updatedBody);
         var actualTodo = todoService.read().getFirst();
         assertThat(actualTodo).isEqualTo(updatedBody);
+    }
+
+    @Test
+    void deleteTodo() {
+        var id = body.getId();
+
+        todoService.create(body);
+        todoService.delete(id);
+
+        var actualTodos = todoService.read();
+
+        assert(actualTodos.isEmpty());
     }
 }

@@ -5,12 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
+import lombok.Data;
 import org.apache.http.HttpStatus;
 import todoapp.models.Todo;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+@Data
 public class TodoService implements TodoCrudInterface {
     private final static String BASE_URL = "http://localhost:8080";
     private final static String TODO_ENDPOINT = "/todos";
@@ -18,17 +21,18 @@ public class TodoService implements TodoCrudInterface {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
+    private List<String> todoIds = new ArrayList<>();
+
 
     private final RequestSpecification unauthReqSpecs = RestAssured.given()
             .contentType(ContentType.JSON);
     private final RequestSpecification authReqSpecs = RestAssured.given()
             .contentType(ContentType.JSON)
-            .auth().basic("admin", "admin");
+            .auth().preemptive().basic("admin", "admin");
 
     @Override
     public void create(Todo todo) {
         var body = this.todoSerialize(todo);
-        System.out.println(body);
         RestAssured.given()
                 .spec(unauthReqSpecs)
                 .body(body)
@@ -36,6 +40,7 @@ public class TodoService implements TodoCrudInterface {
                 .post(TODO_URL)
                 .then()
                 .statusCode(HttpStatus.SC_CREATED);
+        todoIds.add(todo.getId());
     }
 
     @Override
@@ -64,7 +69,7 @@ public class TodoService implements TodoCrudInterface {
     }
 
     @Override
-    public void delete(Integer id) {
+    public void delete(String id) {
         RestAssured.given()
                 .spec(authReqSpecs)
                 .when()
@@ -94,9 +99,9 @@ public class TodoService implements TodoCrudInterface {
 
         return """
                 {
-                    \"id\": %d,
-                    \"text\": \"Eat milk\",
-                    \"completed\": false
+                    \"id\": %s,
+                    \"text\": \"%s\",
+                    \"completed\": %s
                 }
                 """.formatted(id, text, todoCompleted);
     }

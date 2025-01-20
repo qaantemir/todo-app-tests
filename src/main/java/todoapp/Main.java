@@ -26,14 +26,16 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Hello world!");
         Todo todo = Todo.builder()
-                .id(111)
+                .id("111")
                 .text("Eat milk")
                 .completed(false)
                 .build();
 
         TodoService todoService = new TodoService();
-        todoService.deleteAllTodos();
-//        System.out.println(todos);
+        todoService.create(todo);
+
+        System.out.println(todoService.read());
+        todoService.delete("111");
 
 
     }
