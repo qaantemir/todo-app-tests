@@ -78,20 +78,6 @@ public class TodoService implements TodoCrudInterface {
                 .statusCode(HttpStatus.SC_NO_CONTENT);
     }
 
-    public void deleteAllTodos() {
-        var todos = this.read();
-//        if (todos != null && !todos.isEmpty()) todos.forEach(todo -> this.delete(String.valueOf(todo.getId())));
-        System.out.println(todos);
-        System.out.println(todos != null);
-        System.out.println(!todos.isEmpty());
-        if (todos != null && !todos.isEmpty()) {
-            for (var todo : todos) {
-                this.delete(todo.getId());
-            }
-        }
-
-    }
-
     private String todoSerialize(Todo todo) {
         var id = todo.getId();
         var text = todo.getText();

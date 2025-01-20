@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.restassured.RestAssured;
+import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 
 
 public class TodoControllerTest extends BaseApiTest {
@@ -66,6 +68,26 @@ public class TodoControllerTest extends BaseApiTest {
     }
 
     @Test
+    void updateTodoWithWrongId_NegativeTest() {
+        var id = TestDataGenerator.generateRandomId();
+        while (id.equals(body.getId())) {
+            id = TestDataGenerator.generateRandomId();
+        }
+
+        var updatedBody = TestDataGenerator.generateRandomTodo();
+        todoService.create(body);
+        RestAssured.given()
+                .spec(todoService.getUnauthReqSpecs())
+                .body(updatedBody)
+                .when()
+                .put(TODO_URL + "/" + id)
+                .then()
+                .statusCode(HttpStatus.SC_NOT_FOUND);
+        var actualTodo = todoService.read().getFirst();
+        assertThat(actualTodo).isEqualTo(updatedBody);
+    }
+
+    @Test
     void deleteTodo() {
         var id = body.getId();
 
@@ -75,5 +97,45 @@ public class TodoControllerTest extends BaseApiTest {
         var actualTodos = todoService.read();
 
         assert(actualTodos.isEmpty());
+    }
+
+    @Test
+    void deleteWithWrongId_NegativeTest() {
+        var id = TestDataGenerator.generateRandomId();
+        while (id.equals(body.getId())) {
+            id = TestDataGenerator.generateRandomId();
+        }
+
+        todoService.create(body);
+
+        RestAssured.given()
+                .spec(todoService.getAuthReqSpecs())
+                .when()
+                .delete(TODO_URL + "/" + id)
+                .then()
+                .statusCode(HttpStatus.SC_NOT_FOUND);
+
+
+        var actualTodos = todoService.read();
+
+        assert(!actualTodos.isEmpty());
+    }
+
+    @Test
+    void deleteWithounAuth_NegativeTest() {
+        var id = body.getId();
+        todoService.create(body);
+
+        RestAssured.given()
+                .spec(todoService.getUnauthReqSpecs())
+                .when()
+                .delete(TODO_URL + "/" + id)
+                .then()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+
+
+        var actualTodos = todoService.read();
+
+        assert(!actualTodos.isEmpty());
     }
 }

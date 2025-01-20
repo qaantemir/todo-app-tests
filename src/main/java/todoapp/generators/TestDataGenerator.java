@@ -22,6 +22,11 @@ public class TestDataGenerator {
         return new Todo(id, text, completed);
     }
 
+    public static String generateRandomId() {
+        String id = String.valueOf((long) RANDOM.nextInt(1000)); // Генерация случайного ID
+        return id;
+    }
+
     public static List<Todo> generateRandomTodos(int count) {
         List<Todo> todos = new ArrayList<>();
         for (int i = 0; i < count; i++) {

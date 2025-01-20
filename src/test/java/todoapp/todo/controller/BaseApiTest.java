@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeAll;
 public class BaseApiTest {
     private final static String BASE_URL = "http://localhost:8080";
     private final static String TODO_ENDPOINT = "/todos";
-    private final static String TODO_URL = BASE_URL + TODO_ENDPOINT;
+    protected final static String TODO_URL = BASE_URL + TODO_ENDPOINT;
 
     @BeforeAll
     public static void setup() {
