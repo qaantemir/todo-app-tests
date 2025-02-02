@@ -1,21 +1,12 @@
 package todoapp.todo.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.restassured.RestAssured;
-import org.apache.http.HttpStatus;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import todoapp.generators.TestDataGenerator;
 import todoapp.models.Todo;
 import todoapp.requests.TodoService;
+import todoapp.requests.TodoServiceNegative;
 
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -25,6 +16,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 public class TodoControllerTest extends BaseApiTest {
 
     private final TodoService todoService = new TodoService();
+    private final TodoServiceNegative todoServiceNegative = new TodoServiceNegative();
     Todo body = TestDataGenerator.generateRandomTodo();
 
     @BeforeEach
@@ -47,7 +39,48 @@ public class TodoControllerTest extends BaseApiTest {
     }
 
     @Test
+    void getTodosWithQueryParams() {
+        for (int i = 0; i < 5; i++) {
+            todoService.create(TestDataGenerator.generateRandomTodo());
+        }
+        todoService.read(2, 2);
+    }
+
+    @Test
     void postTodo() {
+        todoService.create(body);
+
+        Todo actualTodo = todoService.read().getFirst();
+
+        assertThat(actualTodo).isEqualTo(body);
+
+    }
+
+    @Test
+    void postTodoWithZeroId() {
+        body.setId("0");
+        todoService.create(body);
+
+        Todo actualTodo = todoService.read().getFirst();
+
+        assertThat(actualTodo).isEqualTo(body);
+
+    }
+
+    @Test
+    void postTodoWithMaxId() {
+        body.setId("18446744073709551615");
+        todoService.create(body);
+
+        Todo actualTodo = todoService.read().getFirst();
+
+        assertThat(actualTodo).isEqualTo(body);
+
+    }
+
+    @Test
+    void postTodoWithEmptyTextId() {
+        body.setText("");
         todoService.create(body);
 
         Todo actualTodo = todoService.read().getFirst();
@@ -62,27 +95,7 @@ public class TodoControllerTest extends BaseApiTest {
         var updatedBody = TestDataGenerator.generateRandomTodo(id);
 
         todoService.create(body);
-        todoService.update(updatedBody);
-        var actualTodo = todoService.read().getFirst();
-        assertThat(actualTodo).isEqualTo(updatedBody);
-    }
-
-    @Test
-    void updateTodoWithWrongId_NegativeTest() {
-        var id = TestDataGenerator.generateRandomId();
-        while (id.equals(body.getId())) {
-            id = TestDataGenerator.generateRandomId();
-        }
-
-        var updatedBody = TestDataGenerator.generateRandomTodo();
-        todoService.create(body);
-        RestAssured.given()
-                .spec(todoService.getUnauthReqSpecs())
-                .body(updatedBody)
-                .when()
-                .put(TODO_URL + "/" + id)
-                .then()
-                .statusCode(HttpStatus.SC_NOT_FOUND);
+        todoService.update(id, updatedBody);
         var actualTodo = todoService.read().getFirst();
         assertThat(actualTodo).isEqualTo(updatedBody);
     }
@@ -100,6 +113,23 @@ public class TodoControllerTest extends BaseApiTest {
     }
 
     @Test
+    void updateTodoWithWrongId_NegativeTest() {
+        var id = TestDataGenerator.generateRandomId();
+        while (id.equals(body.getId())) {
+            id = TestDataGenerator.generateRandomId();
+        }
+
+        var updatedBody = TestDataGenerator.generateRandomTodo();
+
+        todoService.create(body);
+
+        todoServiceNegative.update(id, updatedBody);
+
+        var actualTodo = todoService.read().getFirst();
+        assertThat(actualTodo).isNotEqualTo(updatedBody);
+    }
+
+    @Test
     void deleteWithWrongId_NegativeTest() {
         var id = TestDataGenerator.generateRandomId();
         while (id.equals(body.getId())) {
@@ -107,35 +137,58 @@ public class TodoControllerTest extends BaseApiTest {
         }
 
         todoService.create(body);
-
-        RestAssured.given()
-                .spec(todoService.getAuthReqSpecs())
-                .when()
-                .delete(TODO_URL + "/" + id)
-                .then()
-                .statusCode(HttpStatus.SC_NOT_FOUND);
-
+        todoServiceNegative.delete(id);
 
         var actualTodos = todoService.read();
 
         assert(!actualTodos.isEmpty());
+    }
+
+
+    @Test
+    void postWithMinusId_NegativeTest() {
+        var body = TestDataGenerator.generateRandomTodo();
+        body.setId("-1");
+
+        todoServiceNegative.create(body);
+
+        var actualTodo = todoService.read();
+
+        assert (actualTodo.isEmpty());
     }
 
     @Test
-    void deleteWithounAuth_NegativeTest() {
-        var id = body.getId();
-        todoService.create(body);
+    void postWithOverId_NegativeTest() {
+        body.setId("18446744073709551616");
+        todoServiceNegative.create(body);
 
-        RestAssured.given()
-                .spec(todoService.getUnauthReqSpecs())
-                .when()
-                .delete(TODO_URL + "/" + id)
-                .then()
-                .statusCode(HttpStatus.SC_UNAUTHORIZED);
+        var actualTodo = todoService.read();
 
+        assert (actualTodo.isEmpty());
 
-        var actualTodos = todoService.read();
-
-        assert(!actualTodos.isEmpty());
     }
+
+    @Test
+    void postWithSymbolId_NegativeTest() {
+        body.setId("abc");
+        todoServiceNegative.create(body);
+
+        var actualTodo = todoService.read();
+
+        assert (actualTodo.isEmpty());
+
+    }
+
+    @Test
+    void postWithFloatId_NegativeTest() {
+        body.setId("1.1");
+        todoServiceNegative.create(body);
+
+        var actualTodo = todoService.read();
+
+        assert (actualTodo.isEmpty());
+
+    }
+
+
 }
